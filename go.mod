@@ -1,3 +1,3 @@
-module github.com/robinlg/iam/iamerrors
+module github.com/robinlg/iamerrors
 
 go 1.22.10
