@@ -102,3 +102,51 @@ func (agg aggregate) visit(f func(err error) bool) bool {
 func (agg aggregate) Errors() []error {
 	return []error(agg)
 }
+
+// Matcher is used to match errors.  Returns true if the error matches.
+type Matcher func(error) bool
+
+// FilterOut removes all errors that match any of the matchers from the input
+// error.  If the input is a singular error, only that error is tested.  If the
+// input implements the Aggregate interface, the list of errors will be
+// processed recursively.
+//
+// This can be used, for example, to remove known-OK errors (such as io.EOF or
+// os.PathNotFound) from a list of errors.
+func FilterOut(err error, fns ...Matcher) error {
+	if err == nil {
+		return nil
+	}
+	if agg, ok := err.(Aggregate); ok {
+		return NewAggregate(filterErrors(agg.Errors(), fns...))
+	}
+	if !matchesError(err, fns...) {
+		return err
+	}
+	return nil
+}
+
+// matchesError returns true if any Matcher returns true
+func matchesError(err error, fns ...Matcher) bool {
+	for _, fn := range fns {
+		if fn(err) {
+			return true
+		}
+	}
+	return false
+}
+
+// filterErrors returns any errors (or nested errors, if the list contains
+// nested Errors) for which all fns return false. If no errors
+// remain a nil list is returned. The resulting silec will have all
+// nested slices flattened as a side effect.
+func filterErrors(list []error, fns ...Matcher) []error {
+	result := []error{}
+	for _, err := range list {
+		r := FilterOut(err, fns...)
+		if r != nil {
+			result = append(result, r)
+		}
+	}
+	return result
+}
