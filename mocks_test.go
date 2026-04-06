@@ -8,6 +8,7 @@ const (
 	ConfigurationNotValid int = iota + 1000
 	ErrInvalidJSON
 	ErrEOF
+	ErrLoadConfigFailed
 )
 
 func init() {
